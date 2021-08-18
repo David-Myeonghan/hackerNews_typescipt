@@ -1,9 +1,26 @@
-const container = document.getElementById('root');
-const ajax = new XMLHttpRequest();
+// 객체 형태 데이터 유형을 지정
+type Store = {
+	currentPage: number; // ; 으로 끝내기
+	feeds: NewsFeed[]; // NewsFeed가 들어가는 배열
+};
+
+type NewsFeed = {
+	id: number;
+	comments_count: number;
+	url: string;
+	user: string;
+	time_ago: string;
+	points: number;
+	title: string;
+	read?: boolean; // optional, 나중에 추가
+};
+
+const container: HTMLElement | null = document.getElementById('root');
+const ajax: XMLHttpRequest = new XMLHttpRequest();
 const content = document.createElement('div');
 const NEWS_URL = 'https://api.hnpwa.com/v0/news/1.json';
 const CONTENT_URL = 'https://api.hnpwa.com/v0/item/@id.json';
-const store = {
+const store: Store = {
 	currentPage: 1,
 	feeds: [],
 };
@@ -23,9 +40,17 @@ function makeFeeds(feeds) {
 	return feeds;
 }
 
+function updateView(html) {
+	if (container != null) {
+		container.innerHTML = html;
+	} else {
+		console.error('최상위 컨테이너가 없어 진행하지 못합니다.');
+	}
+}
+
 function newsFeed() {
 	// 매번 getData 하지 않도록
-	let newsFeed = store.feeds;
+	let newsFeed: NewsFeed[] = store.feeds;
 	const newsList = [];
 	let template = `
     <div class="bg-gray-600 min-h-screen">
@@ -88,7 +113,9 @@ function newsFeed() {
 	template = template.replace('{{__prev_page__}}', store.currentPage > 1 ? store.currentPage - 1 : 1);
 	template = template.replace('{{__next_page__}}', store.currentPage + 1);
 
-	container.innerHTML = template;
+	// container가 null일수도 있다고 지정해놨기 때문에 오류 방지를 해놔야 한다.
+	// type guard
+	updateView(template);
 }
 
 function newsDetail() {
@@ -150,8 +177,7 @@ function newsDetail() {
 
 		return commentString.join('');
 	}
-
-	container.innerHTML = template.replace('{{__comments__}}', makeComment(newsContent.comments));
+	updateView(template.replace('{{__comments__}}', makeComment(newsContent.comments)));
 }
 
 function router() {
