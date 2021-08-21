@@ -1,32 +1,32 @@
 // 객체 형태 데이터 유형을 지정
-type Store = {
+interface Store {
 	currentPage: number; // ; 으로 끝내기
 	feeds: NewsFeed[]; // NewsFeed가 들어가는 배열
-};
+}
 // 공통되는 것.
-type News = {
+interface News {
 	id: number;
 	time_ago: string;
 	title: string;
 	url: string;
 	user: string;
 	content: string;
-};
+}
 // 인터섹션 기능 '&'
-type NewsFeed = News & {
+interface NewsFeed extends News {
 	comments_count: number;
 	points: number;
 	read?: boolean; // optional, 나중에 추가
-};
+}
 
-type NewsDetail = News & {
+interface NewsDetail extends News {
 	comments: NewsComment[];
-};
+}
 
-type NewsComment = News & {
+interface NewsComment extends News {
 	comments: NewsComment[];
 	level: number;
-};
+}
 
 const container: HTMLElement | null = document.getElementById('root');
 const ajax: XMLHttpRequest = new XMLHttpRequest();
