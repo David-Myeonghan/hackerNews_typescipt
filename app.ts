@@ -38,34 +38,54 @@ const store: Store = {
 	feeds: [],
 };
 
+// Refer to chapter 6
+function applyApiMixins(targetClass: any, baseClasses: any[]): void {
+	baseClasses.forEach((baseClass) => {
+		Object.getOwnPropertyNames(baseClass.prototype).forEach((name) => {
+			const descriptor = Object.getOwnPropertyDescriptor(baseClass.prototype, name);
+
+			if (descriptor) {
+				Object.defineProperty(targetClass.prototype, name, descriptor);
+			}
+		});
+	});
+}
+
 class Api {
 	url: string;
 	ajax: XMLHttpRequest;
 
-	constructor(url: string) {
-		this.url = url;
-		this.ajax = new XMLHttpRequest();
-	}
+	getRequest<AjaxResponse>(url: string): AjaxResponse {
+		const ajax = new XMLHttpRequest();
+		ajax.open('GET', url, false);
+		ajax.send();
 
-	protected getRequest<AjaxResponse>(): AjaxResponse {
-		this.ajax.open('GET', this.url, false);
-		this.ajax.send();
-
-		return JSON.parse(this.ajax.response);
+		return JSON.parse(ajax.response);
 	}
 }
 
-class NewsFeedApi extends Api {
+class NewsFeedApi {
 	getData(): NewsFeed[] {
-		return this.getRequest<NewsFeed[]>();
+		return this.getRequest<NewsFeed[]>(NEWS_URL);
 	}
 }
 
-class NewsDetailApi extends Api {
-	getData(): NewsDetail {
-		return this.getRequest<NewsDetail>();
+class NewsDetailApi {
+	getData(id: string): NewsDetail {
+		return this.getRequest<NewsDetail>(CONTENT_URL.replace('@id', id));
 	}
 }
+
+// mixin 쓰는 이유:
+// 1. extends 는 코드에 적시되는 방법: 관계 유연성 없다. 어떨 때는 a와 b 또는 a와 c 하고 싶을 때, 코드를 바꿔주기 전까지 못한다.
+// 2. JS는 다중상속 안됨. 상위 클라스 n개를 받고 싶을 때.
+
+// 거의 extends 와 비슷한 상황/
+interface NewsFeedApi extends Api {}
+interface NewsDetailApi extends Api {}
+
+applyApiMixins(NewsFeedApi, [Api]);
+applyApiMixins(NewsDetailApi, [Api]);
 
 function makeFeeds(feeds: NewsFeed[]): NewsFeed[] {
 	for (let i = 0; i < feeds.length; i++) {
@@ -85,7 +105,7 @@ function updateView(html: string): void {
 
 function newsFeed(): void {
 	// newsfeed instance
-	const api = new NewsFeedApi(NEWS_URL);
+	const api = new NewsFeedApi();
 
 	// 매번 getData 하지 않도록
 	let newsFeed: NewsFeed[] = store.feeds;
@@ -158,8 +178,8 @@ function newsFeed(): void {
 
 function newsDetail(): void {
 	const id = location.hash.substr(7);
-	const api = new NewsDetailApi(CONTENT_URL.replace('@id', id));
-	const newsContent = api.getData();
+	const api = new NewsDetailApi();
+	const newsDetail: NewsDetail = api.getData(id);
 
 	const template = `
     <div class="bg-gray-600 min-h-screen pb-8">
@@ -179,9 +199,9 @@ function newsDetail(): void {
         </div>
 
         <div class="h-full border rounded-xl bg-white m-6 p-4 ">
-            <h2>${newsContent.title}</h2>
+            <h2>${newsDetail.title}</h2>
             <div class="text-gray-400 h-20">
-                ${newsContent.content}
+                ${newsDetail.content}
             </div>
             {{__comments__}}
         </div>
@@ -195,7 +215,7 @@ function newsDetail(): void {
 		}
 	}
 
-	updateView(template.replace('{{__comments__}}', makeComment(newsContent.comments)));
+	updateView(template.replace('{{__comments__}}', makeComment(newsDetail.comments)));
 }
 
 function makeComment(comments: NewsComment[]): string {
